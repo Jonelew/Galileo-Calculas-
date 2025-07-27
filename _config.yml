@@ -1,0 +1,23 @@
+# GitHub Pages configuration for Universe Explorer
+title: "Universe Explorer - 3D Solar System Visualization"
+description: "Interactive 3D web application for exploring our solar system and universe"
+baseurl: ""
+url: "https://jonelew.github.io"
+
+# Disable Jekyll processing for static files
+plugins: []
+markdown: kramdown
+highlighter: rouge
+
+# Include all files (including those starting with underscores)
+include:
+  - "_*"
+  - ".github"
+
+# Exclude unnecessary files
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
