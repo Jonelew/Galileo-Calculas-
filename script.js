@@ -11,8 +11,15 @@ class UniverseExplorer {
         this.animationSpeed = 1;
         this.isPlaying = true;
         this.clock = new THREE.Clock();
+        this.isMobile = this.detectMobile();
         
         this.init();
+    }
+
+    detectMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+               ('ontouchstart' in window) ||
+               (navigator.maxTouchPoints > 0);
     }
 
     init() {
@@ -34,11 +41,22 @@ class UniverseExplorer {
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
         this.camera.position.set(0, 50, 100);
         
-        // Create renderer
-        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        // Create renderer with mobile optimizations
+        this.renderer = new THREE.WebGLRenderer({ 
+            antialias: !this.isMobile, // Disable antialiasing on mobile for better performance
+            alpha: true,
+            powerPreference: this.isMobile ? "low-power" : "high-performance"
+        });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        
+        // Optimize pixel ratio for mobile
+        this.renderer.setPixelRatio(this.isMobile ? Math.min(window.devicePixelRatio, 2) : window.devicePixelRatio);
+        
+        // Reduce shadow quality on mobile
+        this.renderer.shadowMap.enabled = !this.isMobile; // Disable shadows on mobile
+        if (!this.isMobile) {
+            this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        }
         
         document.getElementById('canvas-container').appendChild(this.renderer.domElement);
         
@@ -328,7 +346,10 @@ class UniverseExplorer {
     }
 
     createAsteroidBelt() {
-        for (let i = 0; i < 200; i++) {
+        // Reduce asteroid count on mobile for better performance
+        const asteroidCount = this.isMobile ? 50 : 200;
+        
+        for (let i = 0; i < asteroidCount; i++) {
             const asteroidGeometry = new THREE.SphereGeometry(Math.random() * 0.5 + 0.1, 8, 8);
             const asteroidMaterial = new THREE.MeshPhongMaterial({ color: 0x666666 });
             const asteroid = new THREE.Mesh(asteroidGeometry, asteroidMaterial);
@@ -354,7 +375,10 @@ class UniverseExplorer {
         const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 2 });
         
         const starVertices = [];
-        for (let i = 0; i < 10000; i++) {
+        // Reduce star count on mobile for better performance
+        const starCount = this.isMobile ? 3000 : 10000;
+        
+        for (let i = 0; i < starCount; i++) {
             const x = (Math.random() - 0.5) * 2000;
             const y = (Math.random() - 0.5) * 2000;
             const z = (Math.random() - 0.5) * 2000;
@@ -383,6 +407,14 @@ class UniverseExplorer {
     }
 
     setupBasicControls() {
+        // Mouse controls for desktop
+        this.setupMouseControls();
+        
+        // Touch controls for mobile
+        this.setupTouchControls();
+    }
+
+    setupMouseControls() {
         let isMouseDown = false;
         let mouseX = 0;
         let mouseY = 0;
@@ -403,25 +435,100 @@ class UniverseExplorer {
             const deltaX = event.clientX - mouseX;
             const deltaY = event.clientY - mouseY;
             
-            // Rotate camera around the scene
-            const spherical = new THREE.Spherical();
-            spherical.setFromVector3(this.camera.position);
-            spherical.theta -= deltaX * 0.01;
-            spherical.phi += deltaY * 0.01;
-            spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
-            
-            this.camera.position.setFromSpherical(spherical);
-            this.camera.lookAt(0, 0, 0);
+            this.rotateCamera(deltaX, deltaY);
             
             mouseX = event.clientX;
             mouseY = event.clientY;
         });
         
         this.renderer.domElement.addEventListener('wheel', (event) => {
-            const distance = this.camera.position.length();
-            const newDistance = distance + event.deltaY * 0.01;
-            this.camera.position.normalize().multiplyScalar(Math.max(10, Math.min(500, newDistance)));
+            event.preventDefault();
+            this.zoomCamera(event.deltaY);
         });
+    }
+
+    setupTouchControls() {
+        let touches = [];
+        let lastDistance = 0;
+        
+        // Prevent default touch behaviors
+        this.renderer.domElement.addEventListener('touchstart', (event) => {
+            event.preventDefault();
+            touches = Array.from(event.touches).map(touch => ({
+                x: touch.clientX,
+                y: touch.clientY,
+                id: touch.identifier
+            }));
+            
+            if (touches.length === 2) {
+                // Two finger pinch - calculate initial distance
+                const dx = touches[0].x - touches[1].x;
+                const dy = touches[0].y - touches[1].y;
+                lastDistance = Math.sqrt(dx * dx + dy * dy);
+            }
+        });
+        
+        this.renderer.domElement.addEventListener('touchmove', (event) => {
+            event.preventDefault();
+            const currentTouches = Array.from(event.touches).map(touch => ({
+                x: touch.clientX,
+                y: touch.clientY,
+                id: touch.identifier
+            }));
+            
+            if (touches.length === 1 && currentTouches.length === 1) {
+                // Single finger - rotate camera
+                const deltaX = currentTouches[0].x - touches[0].x;
+                const deltaY = currentTouches[0].y - touches[0].y;
+                
+                this.rotateCamera(deltaX, deltaY);
+                
+            } else if (touches.length === 2 && currentTouches.length === 2) {
+                // Two finger pinch - zoom
+                const dx = currentTouches[0].x - currentTouches[1].x;
+                const dy = currentTouches[0].y - currentTouches[1].y;
+                const currentDistance = Math.sqrt(dx * dx + dy * dy);
+                
+                const deltaDistance = currentDistance - lastDistance;
+                this.zoomCamera(-deltaDistance * 2); // Negative for natural pinch direction
+                
+                lastDistance = currentDistance;
+            }
+            
+            touches = currentTouches;
+        });
+        
+        this.renderer.domElement.addEventListener('touchend', (event) => {
+            event.preventDefault();
+            touches = Array.from(event.touches).map(touch => ({
+                x: touch.clientX,
+                y: touch.clientY,
+                id: touch.identifier
+            }));
+        });
+        
+        // Prevent scrolling on the canvas
+        this.renderer.domElement.addEventListener('touchcancel', (event) => {
+            event.preventDefault();
+        });
+    }
+
+    rotateCamera(deltaX, deltaY) {
+        // Rotate camera around the scene
+        const spherical = new THREE.Spherical();
+        spherical.setFromVector3(this.camera.position);
+        spherical.theta -= deltaX * 0.01;
+        spherical.phi += deltaY * 0.01;
+        spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+        
+        this.camera.position.setFromSpherical(spherical);
+        this.camera.lookAt(0, 0, 0);
+    }
+
+    zoomCamera(delta) {
+        const distance = this.camera.position.length();
+        const newDistance = distance + delta * 0.01;
+        this.camera.position.normalize().multiplyScalar(Math.max(10, Math.min(500, newDistance)));
     }
 
     bindEvents() {
@@ -671,8 +778,62 @@ class UniverseExplorer {
             loadingScreen.style.opacity = '0';
             setTimeout(() => {
                 loadingScreen.style.display = 'none';
+                
+                // Show mobile welcome message
+                if (this.isMobile) {
+                    this.showMobileWelcome();
+                }
             }, 500);
         }, 2000);
+    }
+
+    showMobileWelcome() {
+        const welcomeDiv = document.createElement('div');
+        welcomeDiv.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 1001;
+            max-width: 300px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        `;
+        
+        welcomeDiv.innerHTML = `
+            <h3 style="color: #64b5f6; margin-bottom: 15px;">
+                <i class="fas fa-rocket"></i> Welcome to Universe Explorer!
+            </h3>
+            <p style="margin-bottom: 15px; font-size: 14px;">
+                <strong>Touch Controls:</strong><br>
+                🖱️ One finger: Drag to rotate<br>
+                🤏 Two fingers: Pinch to zoom<br>
+                👆 Tap planets to explore
+            </p>
+            <button onclick="this.parentElement.remove()" style="
+                background: #64b5f6;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 8px;
+                color: white;
+                cursor: pointer;
+                font-weight: bold;
+            ">Start Exploring! 🚀</button>
+        `;
+        
+        document.body.appendChild(welcomeDiv);
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            if (welcomeDiv.parentElement) {
+                welcomeDiv.remove();
+            }
+        }, 5000);
     }
 }
 

@@ -347,6 +347,44 @@ body {
     color: #ffd54f;
 }
 
+/* Mobile Help */
+.mobile-help {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    display: none; /* Hidden by default */
+}
+
+@media (max-width: 768px) {
+    .navigation-help {
+        display: none; /* Hide desktop help on mobile */
+    }
+    
+    .mobile-help {
+        display: block; /* Show mobile help */
+        bottom: 140px; /* Position above info panel */
+        right: 5px;
+        left: 5px;
+        padding: 10px;
+    }
+    
+    .mobile-help .help-content h4 {
+        font-size: 12px;
+        margin-bottom: 8px;
+    }
+    
+    .mobile-help .help-content p {
+        font-size: 10px;
+        margin: 2px 0;
+    }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .control-panel {
@@ -372,21 +410,25 @@ body {
 @media (max-width: 480px) {
     .control-panel {
         position: fixed;
-        top: 80px;
-        left: 10px;
-        right: 10px;
+        top: 70px;
+        left: 5px;
+        right: 5px;
         width: auto;
-        max-height: 200px;
+        max-height: 180px;
+        padding: 15px;
+        overflow-y: auto;
     }
     
     .info-panel {
         position: fixed;
-        bottom: 10px;
-        left: 10px;
-        right: 10px;
+        bottom: 5px;
+        left: 5px;
+        right: 5px;
         width: auto;
         top: auto;
-        max-height: 150px;
+        max-height: 120px;
+        padding: 15px;
+        overflow-y: auto;
     }
     
     .navigation-help {
@@ -394,11 +436,67 @@ body {
     }
     
     .header {
-        top: 10px;
-        left: 10px;
-        right: 10px;
+        top: 5px;
+        left: 5px;
+        right: 5px;
         transform: none;
-        padding: 10px 15px;
+        padding: 8px 12px;
+    }
+    
+    .header-content h1 {
+        font-size: 20px;
+    }
+    
+    .header-content p {
+        font-size: 12px;
+    }
+    
+    /* Make buttons larger for touch */
+    .control-btn {
+        padding: 15px 20px;
+        font-size: 15px;
+        min-height: 50px;
+    }
+    
+    .planet-btn {
+        padding: 15px 10px;
+        min-height: 60px;
+    }
+    
+    .planet-icon {
+        width: 28px;
+        height: 28px;
+    }
+    
+    /* Speed slider for mobile */
+    #speedSlider {
+        height: 40px;
+        -webkit-appearance: none;
+        appearance: none;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+    }
+    
+    #speedSlider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #64b5f6;
+        cursor: pointer;
+        border: 2px solid white;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    }
+    
+    #speedSlider::-moz-range-thumb {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #64b5f6;
+        cursor: pointer;
+        border: 2px solid white;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
     }
 }
 
