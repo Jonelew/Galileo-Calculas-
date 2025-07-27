@@ -367,40 +367,111 @@ class UniverseExplorer {
     }
 
     setupControls() {
-        this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
-        this.controls.enableDamping = true;
-        this.controls.dampingFactor = 0.05;
-        this.controls.minDistance = 10;
-        this.controls.maxDistance = 500;
+        // Check if OrbitControls is available
+        if (typeof THREE.OrbitControls !== 'undefined') {
+            this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+            this.controls.enableDamping = true;
+            this.controls.dampingFactor = 0.05;
+            this.controls.minDistance = 10;
+            this.controls.maxDistance = 500;
+            console.log('OrbitControls initialized successfully');
+        } else {
+            console.error('OrbitControls not available - using fallback');
+            // Fallback: basic mouse controls
+            this.setupBasicControls();
+        }
+    }
+
+    setupBasicControls() {
+        let isMouseDown = false;
+        let mouseX = 0;
+        let mouseY = 0;
+        
+        this.renderer.domElement.addEventListener('mousedown', (event) => {
+            isMouseDown = true;
+            mouseX = event.clientX;
+            mouseY = event.clientY;
+        });
+        
+        this.renderer.domElement.addEventListener('mouseup', () => {
+            isMouseDown = false;
+        });
+        
+        this.renderer.domElement.addEventListener('mousemove', (event) => {
+            if (!isMouseDown) return;
+            
+            const deltaX = event.clientX - mouseX;
+            const deltaY = event.clientY - mouseY;
+            
+            // Rotate camera around the scene
+            const spherical = new THREE.Spherical();
+            spherical.setFromVector3(this.camera.position);
+            spherical.theta -= deltaX * 0.01;
+            spherical.phi += deltaY * 0.01;
+            spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+            
+            this.camera.position.setFromSpherical(spherical);
+            this.camera.lookAt(0, 0, 0);
+            
+            mouseX = event.clientX;
+            mouseY = event.clientY;
+        });
+        
+        this.renderer.domElement.addEventListener('wheel', (event) => {
+            const distance = this.camera.position.length();
+            const newDistance = distance + event.deltaY * 0.01;
+            this.camera.position.normalize().multiplyScalar(Math.max(10, Math.min(500, newDistance)));
+        });
     }
 
     bindEvents() {
         // View mode buttons
         document.querySelectorAll('.control-btn[data-view]').forEach(btn => {
-            btn.addEventListener('click', (e) => this.switchView(e.target.dataset.view));
+            btn.addEventListener('click', (e) => {
+                const view = e.target.dataset.view || e.currentTarget.dataset.view;
+                console.log('View button clicked:', view);
+                if (view) {
+                    this.switchView(view);
+                }
+            });
         });
         
         // Planet selection buttons
         document.querySelectorAll('.planet-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const planetName = e.currentTarget.dataset.planet;
+                console.log('Planet button clicked:', planetName);
                 this.focusOnPlanet(planetName);
             });
         });
         
         // Animation controls
-        document.getElementById('speedSlider').addEventListener('input', (e) => {
-            this.animationSpeed = parseFloat(e.target.value);
-            document.getElementById('speedValue').textContent = this.animationSpeed + 'x';
-        });
+        const speedSlider = document.getElementById('speedSlider');
+        if (speedSlider) {
+            speedSlider.addEventListener('input', (e) => {
+                this.animationSpeed = parseFloat(e.target.value);
+                document.getElementById('speedValue').textContent = this.animationSpeed + 'x';
+                console.log('Speed changed to:', this.animationSpeed);
+            });
+        }
         
-        document.getElementById('playPauseBtn').addEventListener('click', () => {
-            this.togglePlayPause();
-        });
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        if (playPauseBtn) {
+            playPauseBtn.addEventListener('click', () => {
+                console.log('Play/Pause clicked');
+                this.togglePlayPause();
+            });
+        }
         
-        document.getElementById('resetBtn').addEventListener('click', () => {
-            this.resetView();
-        });
+        const resetBtn = document.getElementById('resetBtn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                console.log('Reset clicked');
+                this.resetView();
+            });
+        }
+        
+        console.log('All event listeners bound successfully');
     }
 
     switchView(view) {
@@ -543,8 +614,11 @@ class UniverseExplorer {
 
     resetView() {
         this.camera.position.set(0, 50, 200);
-        this.controls.target.set(0, 0, 0);
-        this.controls.update();
+        this.camera.lookAt(0, 0, 0);
+        if (this.controls && this.controls.target) {
+            this.controls.target.set(0, 0, 0);
+            this.controls.update();
+        }
         this.switchView('solar');
     }
 
@@ -579,7 +653,9 @@ class UniverseExplorer {
             });
         }
         
-        this.controls.update();
+        if (this.controls && this.controls.update) {
+            this.controls.update();
+        }
         this.renderer.render(this.scene, this.camera);
     }
 
@@ -602,5 +678,21 @@ class UniverseExplorer {
 
 // Initialize the Universe Explorer when page loads
 window.addEventListener('load', () => {
-    new UniverseExplorer();
+    try {
+        console.log('Initializing Universe Explorer...');
+        const explorer = new UniverseExplorer();
+        window.universeExplorer = explorer; // Make it globally accessible for debugging
+        console.log('Universe Explorer initialized successfully!');
+    } catch (error) {
+        console.error('Failed to initialize Universe Explorer:', error);
+        // Show error message to user
+        document.body.innerHTML = `
+            <div style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column; color: white; font-family: Arial, sans-serif;">
+                <h1>🚀 Universe Explorer</h1>
+                <p>Error loading the application. Please check your browser console for details.</p>
+                <p>Make sure you're using a modern browser with WebGL support.</p>
+                <button onclick="location.reload()" style="padding: 10px 20px; margin-top: 20px; background: #64b5f6; border: none; border-radius: 5px; color: white; cursor: pointer;">Reload Page</button>
+            </div>
+        `;
+    }
 });

@@ -83,6 +83,15 @@ body {
     pointer-events: auto;
 }
 
+/* Ensure canvas is interactive */
+#canvas-container {
+    pointer-events: auto;
+}
+
+#canvas-container canvas {
+    pointer-events: auto !important;
+}
+
 /* Header */
 .header {
     position: absolute;

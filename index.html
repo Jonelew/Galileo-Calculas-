@@ -6,7 +6,22 @@
     <title>Universe Explorer - Solar System & Beyond</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // Ensure libraries are loaded
+        window.addEventListener('load', function() {
+            if (typeof THREE === 'undefined') {
+                console.error('Three.js failed to load');
+            } else {
+                console.log('Three.js loaded successfully');
+            }
+            if (typeof THREE.OrbitControls === 'undefined') {
+                console.error('OrbitControls failed to load');
+            } else {
+                console.log('OrbitControls loaded successfully');
+            }
+        });
+    </script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
