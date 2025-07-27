@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main, master, cursor/build-universe-and-solar-system-viewer-4fb1 ]
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
