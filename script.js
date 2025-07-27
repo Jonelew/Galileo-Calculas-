@@ -1,448 +1,606 @@
-// Lecture Schedule Manager
-class LectureScheduler {
+// Universe Explorer - 3D Solar System and Universe Visualization
+class UniverseExplorer {
     constructor() {
-        this.lectures = this.loadLectures();
-        this.currentView = 'upcoming';
-        this.editingLecture = null;
-        this.initializeApp();
+        this.scene = null;
+        this.camera = null;
+        this.renderer = null;
+        this.controls = null;
+        this.planets = {};
+        this.stars = [];
+        this.currentView = 'solar';
+        this.animationSpeed = 1;
+        this.isPlaying = true;
+        this.clock = new THREE.Clock();
+        
+        this.init();
     }
 
-    initializeApp() {
+    init() {
+        this.setupScene();
+        this.createLighting();
+        this.createSolarSystem();
+        this.createStarField();
+        this.setupControls();
         this.bindEvents();
-        this.renderLectures();
-        this.updateSubjectFilter();
-        this.setDefaultDate();
+        this.hideLoadingScreen();
+        this.animate();
+    }
+
+    setupScene() {
+        // Create scene
+        this.scene = new THREE.Scene();
+        
+        // Create camera
+        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+        this.camera.position.set(0, 50, 100);
+        
+        // Create renderer
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        
+        document.getElementById('canvas-container').appendChild(this.renderer.domElement);
+        
+        // Handle window resize
+        window.addEventListener('resize', () => this.onWindowResize());
+    }
+
+    createLighting() {
+        // Ambient light
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.2);
+        this.scene.add(ambientLight);
+        
+        // Sun light (point light)
+        const sunLight = new THREE.PointLight(0xffffff, 2, 1000);
+        sunLight.position.set(0, 0, 0);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        this.scene.add(sunLight);
+    }
+
+    createSolarSystem() {
+        // Planet data with realistic relative sizes and distances
+        const planetData = {
+            sun: { 
+                size: 10, 
+                distance: 0, 
+                color: 0xffd54f, 
+                rotationSpeed: 0.01,
+                orbitSpeed: 0,
+                info: {
+                    title: "The Sun",
+                    description: "The Sun is a G-type main-sequence star that formed approximately 4.6 billion years ago.",
+                    facts: [
+                        "Mass: 1.989 × 10³⁰ kg",
+                        "Temperature: 5,778 K (surface)",
+                        "Composition: 73% Hydrogen, 25% Helium",
+                        "Age: 4.6 billion years"
+                    ]
+                }
+            },
+            mercury: { 
+                size: 1.5, 
+                distance: 25, 
+                color: 0x8c7853, 
+                rotationSpeed: 0.02,
+                orbitSpeed: 0.04,
+                info: {
+                    title: "Mercury",
+                    description: "Mercury is the smallest planet in our solar system and closest to the Sun.",
+                    facts: [
+                        "Distance from Sun: 58 million km",
+                        "Day length: 59 Earth days",
+                        "Year length: 88 Earth days",
+                        "Temperature: -173°C to 427°C"
+                    ]
+                }
+            },
+            venus: { 
+                size: 2, 
+                distance: 35, 
+                color: 0xff6f00, 
+                rotationSpeed: 0.015,
+                orbitSpeed: 0.035,
+                info: {
+                    title: "Venus",
+                    description: "Venus is the hottest planet in our solar system due to its thick atmosphere.",
+                    facts: [
+                        "Distance from Sun: 108 million km",
+                        "Day length: 243 Earth days",
+                        "Year length: 225 Earth days",
+                        "Atmosphere: 96% Carbon Dioxide"
+                    ]
+                }
+            },
+            earth: { 
+                size: 2.2, 
+                distance: 45, 
+                color: 0x2196f3, 
+                rotationSpeed: 0.02,
+                orbitSpeed: 0.03,
+                info: {
+                    title: "Earth",
+                    description: "Earth is the only known planet with life and liquid water on its surface.",
+                    facts: [
+                        "Distance from Sun: 150 million km",
+                        "Day length: 24 hours",
+                        "Year length: 365.25 days",
+                        "71% of surface covered by water"
+                    ]
+                }
+            },
+            mars: { 
+                size: 1.8, 
+                distance: 60, 
+                color: 0xd32f2f, 
+                rotationSpeed: 0.018,
+                orbitSpeed: 0.025,
+                info: {
+                    title: "Mars",
+                    description: "Mars is known as the Red Planet due to iron oxide on its surface.",
+                    facts: [
+                        "Distance from Sun: 228 million km",
+                        "Day length: 24.6 hours",
+                        "Year length: 687 Earth days",
+                        "Has the largest volcano: Olympus Mons"
+                    ]
+                }
+            },
+            jupiter: { 
+                size: 6, 
+                distance: 90, 
+                color: 0xff9800, 
+                rotationSpeed: 0.025,
+                orbitSpeed: 0.02,
+                info: {
+                    title: "Jupiter",
+                    description: "Jupiter is the largest planet in our solar system, a gas giant.",
+                    facts: [
+                        "Distance from Sun: 778 million km",
+                        "Day length: 9.9 hours",
+                        "Year length: 12 Earth years",
+                        "Has over 80 known moons"
+                    ]
+                }
+            },
+            saturn: { 
+                size: 5, 
+                distance: 120, 
+                color: 0xffb74d, 
+                rotationSpeed: 0.023,
+                orbitSpeed: 0.015,
+                info: {
+                    title: "Saturn",
+                    description: "Saturn is famous for its prominent ring system made of ice and rock.",
+                    facts: [
+                        "Distance from Sun: 1.4 billion km",
+                        "Day length: 10.7 hours",
+                        "Year length: 29 Earth years",
+                        "Density lower than water"
+                    ]
+                }
+            },
+            uranus: { 
+                size: 3.5, 
+                distance: 150, 
+                color: 0x00bcd4, 
+                rotationSpeed: 0.02,
+                orbitSpeed: 0.012,
+                info: {
+                    title: "Uranus",
+                    description: "Uranus rotates on its side and has a unique ring system.",
+                    facts: [
+                        "Distance from Sun: 2.9 billion km",
+                        "Day length: 17.2 hours",
+                        "Year length: 84 Earth years",
+                        "Rotates on its side (98° tilt)"
+                    ]
+                }
+            },
+            neptune: { 
+                size: 3.2, 
+                distance: 180, 
+                color: 0x3f51b5, 
+                rotationSpeed: 0.019,
+                orbitSpeed: 0.01,
+                info: {
+                    title: "Neptune",
+                    description: "Neptune is the windiest planet with speeds up to 2,100 km/h.",
+                    facts: [
+                        "Distance from Sun: 4.5 billion km",
+                        "Day length: 16.1 hours",
+                        "Year length: 165 Earth years",
+                        "Strongest winds in solar system"
+                    ]
+                }
+            }
+        };
+
+        // Create planets
+        Object.keys(planetData).forEach(planetName => {
+            const data = planetData[planetName];
+            this.createPlanet(planetName, data);
+        });
+
+        // Create asteroid belt
+        this.createAsteroidBelt();
+    }
+
+    createPlanet(name, data) {
+        const geometry = new THREE.SphereGeometry(data.size, 32, 32);
+        
+        let material;
+        if (name === 'sun') {
+            // Sun with glow effect
+            material = new THREE.MeshBasicMaterial({ 
+                color: data.color,
+                transparent: true,
+                opacity: 0.9
+            });
+            
+            // Add glow
+            const glowGeometry = new THREE.SphereGeometry(data.size * 1.2, 32, 32);
+            const glowMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    glowColor: { value: new THREE.Color(0xffd54f) },
+                    viewVector: { value: this.camera.position }
+                },
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                vertexShader: `
+                    uniform vec3 viewVector;
+                    varying float intensity;
+                    void main() {
+                        vec3 vNormal = normalize(normalMatrix * normal);
+                        vec3 vNormel = normalize(normalMatrix * viewVector);
+                        intensity = pow(0.8 - dot(vNormal, vNormel), 2.0);
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform vec3 glowColor;
+                    varying float intensity;
+                    void main() {
+                        vec3 glow = glowColor * intensity;
+                        gl_FragColor = vec4(glow, 1.0);
+                    }
+                `
+            });
+            
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            this.scene.add(glow);
+        } else {
+            material = new THREE.MeshPhongMaterial({ 
+                color: data.color,
+                shininess: 30
+            });
+        }
+        
+        const planet = new THREE.Mesh(geometry, material);
+        planet.position.x = data.distance;
+        planet.castShadow = true;
+        planet.receiveShadow = true;
+        planet.userData = { 
+            name, 
+            orbitRadius: data.distance, 
+            angle: Math.random() * Math.PI * 2,
+            rotationSpeed: data.rotationSpeed,
+            orbitSpeed: data.orbitSpeed,
+            info: data.info
+        };
+        
+        // Create orbit line
+        if (data.distance > 0) {
+            const orbitGeometry = new THREE.RingGeometry(data.distance - 0.5, data.distance + 0.5, 64);
+            const orbitMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0x444444, 
+                transparent: true, 
+                opacity: 0.3, 
+                side: THREE.DoubleSide 
+            });
+            const orbit = new THREE.Mesh(orbitGeometry, orbitMaterial);
+            orbit.rotation.x = Math.PI / 2;
+            this.scene.add(orbit);
+        }
+        
+        // Special effects for certain planets
+        if (name === 'saturn') {
+            this.addSaturnRings(planet, data.size);
+        }
+        
+        this.scene.add(planet);
+        this.planets[name] = planet;
+    }
+
+    addSaturnRings(planet, planetSize) {
+        const ringGeometry = new THREE.RingGeometry(planetSize * 1.2, planetSize * 2, 32);
+        const ringMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0xaaaaaa, 
+            transparent: true, 
+            opacity: 0.6, 
+            side: THREE.DoubleSide 
+        });
+        const rings = new THREE.Mesh(ringGeometry, ringMaterial);
+        rings.rotation.x = Math.PI / 2;
+        planet.add(rings);
+    }
+
+    createAsteroidBelt() {
+        for (let i = 0; i < 200; i++) {
+            const asteroidGeometry = new THREE.SphereGeometry(Math.random() * 0.5 + 0.1, 8, 8);
+            const asteroidMaterial = new THREE.MeshPhongMaterial({ color: 0x666666 });
+            const asteroid = new THREE.Mesh(asteroidGeometry, asteroidMaterial);
+            
+            const distance = 75 + Math.random() * 10;
+            const angle = Math.random() * Math.PI * 2;
+            asteroid.position.x = Math.cos(angle) * distance;
+            asteroid.position.z = Math.sin(angle) * distance;
+            asteroid.position.y = (Math.random() - 0.5) * 5;
+            
+            asteroid.userData = {
+                orbitRadius: distance,
+                angle: angle,
+                orbitSpeed: 0.005 + Math.random() * 0.01
+            };
+            
+            this.scene.add(asteroid);
+        }
+    }
+
+    createStarField() {
+        const starGeometry = new THREE.BufferGeometry();
+        const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 2 });
+        
+        const starVertices = [];
+        for (let i = 0; i < 10000; i++) {
+            const x = (Math.random() - 0.5) * 2000;
+            const y = (Math.random() - 0.5) * 2000;
+            const z = (Math.random() - 0.5) * 2000;
+            starVertices.push(x, y, z);
+        }
+        
+        starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+        const stars = new THREE.Points(starGeometry, starMaterial);
+        this.scene.add(stars);
+    }
+
+    setupControls() {
+        this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+        this.controls.enableDamping = true;
+        this.controls.dampingFactor = 0.05;
+        this.controls.minDistance = 10;
+        this.controls.maxDistance = 500;
     }
 
     bindEvents() {
-        // Form submission
-        document.getElementById('lectureForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.handleFormSubmit();
+        // View mode buttons
+        document.querySelectorAll('.control-btn[data-view]').forEach(btn => {
+            btn.addEventListener('click', (e) => this.switchView(e.target.dataset.view));
         });
-
-        // View toggle buttons
-        document.querySelectorAll('.toggle-btn').forEach(btn => {
+        
+        // Planet selection buttons
+        document.querySelectorAll('.planet-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                this.switchView(e.target.dataset.view);
+                const planetName = e.currentTarget.dataset.planet;
+                this.focusOnPlanet(planetName);
             });
         });
-
-        // Search functionality
-        document.getElementById('searchLectures').addEventListener('input', (e) => {
-            this.filterLectures();
-        });
-
-        // Subject filter
-        document.getElementById('filterSubject').addEventListener('change', (e) => {
-            this.filterLectures();
-        });
-
-        // Modal events
-        document.getElementById('confirmDelete').addEventListener('click', () => {
-            this.confirmDelete();
-        });
-
-        document.getElementById('cancelDelete').addEventListener('click', () => {
-            this.closeModal();
-        });
-
-        // Close modal when clicking outside
-        document.getElementById('deleteModal').addEventListener('click', (e) => {
-            if (e.target.id === 'deleteModal') {
-                this.closeModal();
-            }
-        });
-    }
-
-    setDefaultDate() {
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('date').value = today;
-    }
-
-    handleFormSubmit() {
-        const formData = new FormData(document.getElementById('lectureForm'));
-        const lecture = {
-            id: this.editingLecture ? this.editingLecture.id : Date.now(),
-            subject: formData.get('subject'),
-            date: formData.get('date'),
-            time: formData.get('time'),
-            duration: parseInt(formData.get('duration')),
-            platform: formData.get('platform'),
-            instructor: formData.get('instructor'),
-            meetingLink: formData.get('meetingLink'),
-            notes: formData.get('notes'),
-            createdAt: this.editingLecture ? this.editingLecture.createdAt : Date.now()
-        };
-
-        if (this.editingLecture) {
-            this.updateLecture(lecture);
-        } else {
-            this.addLecture(lecture);
-        }
-
-        this.resetForm();
-        this.saveLectures();
-        this.renderLectures();
-        this.updateSubjectFilter();
-        this.showNotification(this.editingLecture ? 'Lecture updated successfully!' : 'Lecture added successfully!');
-    }
-
-    addLecture(lecture) {
-        this.lectures.push(lecture);
-    }
-
-    updateLecture(lecture) {
-        const index = this.lectures.findIndex(l => l.id === lecture.id);
-        if (index !== -1) {
-            this.lectures[index] = lecture;
-        }
-        this.editingLecture = null;
-    }
-
-    deleteLecture(id) {
-        this.lectures = this.lectures.filter(lecture => lecture.id !== id);
-        this.saveLectures();
-        this.renderLectures();
-        this.updateSubjectFilter();
-        this.showNotification('Lecture deleted successfully!');
-    }
-
-    editLecture(id) {
-        const lecture = this.lectures.find(l => l.id === id);
-        if (lecture) {
-            this.editingLecture = lecture;
-            this.populateForm(lecture);
-            // Scroll to form
-            document.querySelector('.form-card').scrollIntoView({ behavior: 'smooth' });
-        }
-    }
-
-    populateForm(lecture) {
-        document.getElementById('subject').value = lecture.subject;
-        document.getElementById('date').value = lecture.date;
-        document.getElementById('time').value = lecture.time;
-        document.getElementById('duration').value = lecture.duration;
-        document.getElementById('platform').value = lecture.platform;
-        document.getElementById('instructor').value = lecture.instructor || '';
-        document.getElementById('meetingLink').value = lecture.meetingLink || '';
-        document.getElementById('notes').value = lecture.notes || '';
         
-        // Update submit button text
-        const submitBtn = document.querySelector('.submit-btn');
-        submitBtn.innerHTML = '<i class="fas fa-save"></i> Update Lecture';
-    }
-
-    resetForm() {
-        document.getElementById('lectureForm').reset();
-        this.editingLecture = null;
-        this.setDefaultDate();
+        // Animation controls
+        document.getElementById('speedSlider').addEventListener('input', (e) => {
+            this.animationSpeed = parseFloat(e.target.value);
+            document.getElementById('speedValue').textContent = this.animationSpeed + 'x';
+        });
         
-        // Reset submit button text
-        const submitBtn = document.querySelector('.submit-btn');
-        submitBtn.innerHTML = '<i class="fas fa-plus"></i> Add Lecture';
+        document.getElementById('playPauseBtn').addEventListener('click', () => {
+            this.togglePlayPause();
+        });
+        
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            this.resetView();
+        });
     }
 
     switchView(view) {
         this.currentView = view;
         
-        // Update toggle buttons
-        document.querySelectorAll('.toggle-btn').forEach(btn => {
+        // Update button states
+        document.querySelectorAll('.control-btn[data-view]').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.view === view);
         });
         
-        this.renderLectures();
+        // Animate camera to new position
+        const targetPosition = this.getViewPosition(view);
+        this.animateCameraTo(targetPosition);
+        
+        // Update info panel
+        this.updateInfoPanel(view);
     }
 
-    filterLectures() {
-        const searchTerm = document.getElementById('searchLectures').value.toLowerCase();
-        const selectedSubject = document.getElementById('filterSubject').value;
+    getViewPosition(view) {
+        switch (view) {
+            case 'solar':
+                return { x: 0, y: 50, z: 200 };
+            case 'galaxy':
+                return { x: 0, y: 200, z: 800 };
+            case 'universe':
+                return { x: 0, y: 500, z: 1500 };
+            default:
+                return { x: 0, y: 50, z: 200 };
+        }
+    }
+
+    animateCameraTo(targetPosition) {
+        const startPosition = this.camera.position.clone();
+        const duration = 2000; // 2 seconds
+        const startTime = Date.now();
         
-        let filteredLectures = this.lectures;
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Smooth easing
+            const easeProgress = 1 - Math.pow(1 - progress, 3);
+            
+            this.camera.position.lerpVectors(startPosition, new THREE.Vector3(
+                targetPosition.x, targetPosition.y, targetPosition.z
+            ), easeProgress);
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            }
+        };
         
-        // Filter by view (upcoming/all)
-        if (this.currentView === 'upcoming') {
-            const now = new Date();
-            filteredLectures = filteredLectures.filter(lecture => {
-                const lectureDateTime = new Date(`${lecture.date}T${lecture.time}`);
-                return lectureDateTime >= now;
+        animate();
+    }
+
+    focusOnPlanet(planetName) {
+        const planet = this.planets[planetName];
+        if (planet) {
+            const planetPosition = planet.position.clone();
+            const cameraOffset = new THREE.Vector3(0, 20, planet.userData.name === 'sun' ? 50 : 30);
+            const targetPosition = planetPosition.add(cameraOffset);
+            
+            this.animateCameraTo(targetPosition);
+            this.updateInfoPanel('planet', planet.userData.info);
+        }
+    }
+
+    updateInfoPanel(type, data = null) {
+        const titleElement = document.getElementById('objectTitle');
+        const descriptionElement = document.getElementById('objectDescription');
+        
+        if (type === 'planet' && data) {
+            titleElement.textContent = data.title;
+            descriptionElement.innerHTML = `
+                <p>${data.description}</p>
+                <ul>
+                    ${data.facts.map(fact => `<li>${fact}</li>`).join('')}
+                </ul>
+            `;
+        } else {
+            // Default view info
+            const viewInfo = {
+                solar: {
+                    title: "Solar System Overview",
+                    description: `
+                        <p>Our Solar System consists of the Sun and everything that orbits it, including planets, moons, asteroids, comets and meteoroids.</p>
+                        <ul>
+                            <li><strong>Age:</strong> ~4.6 billion years</li>
+                            <li><strong>Location:</strong> Milky Way Galaxy</li>
+                            <li><strong>Planets:</strong> 8 major planets</li>
+                            <li><strong>Central Star:</strong> The Sun</li>
+                        </ul>
+                    `
+                },
+                galaxy: {
+                    title: "Milky Way Galaxy",
+                    description: `
+                        <p>The Milky Way is a barred spiral galaxy containing our Solar System.</p>
+                        <ul>
+                            <li><strong>Diameter:</strong> ~100,000 light-years</li>
+                            <li><strong>Stars:</strong> 100-400 billion</li>
+                            <li><strong>Age:</strong> ~13.6 billion years</li>
+                            <li><strong>Type:</strong> Barred spiral galaxy</li>
+                        </ul>
+                    `
+                },
+                universe: {
+                    title: "Observable Universe",
+                    description: `
+                        <p>The observable universe is the spherical region centered on Earth from which light has had time to reach us.</p>
+                        <ul>
+                            <li><strong>Age:</strong> ~13.8 billion years</li>
+                            <li><strong>Diameter:</strong> ~93 billion light-years</li>
+                            <li><strong>Galaxies:</strong> Over 2 trillion</li>
+                            <li><strong>Stars:</strong> 10²³ - 10²⁴</li>
+                        </ul>
+                    `
+                }
+            };
+            
+            const info = viewInfo[type] || viewInfo.solar;
+            titleElement.textContent = info.title;
+            descriptionElement.innerHTML = info.description;
+        }
+    }
+
+    togglePlayPause() {
+        this.isPlaying = !this.isPlaying;
+        const btn = document.getElementById('playPauseBtn');
+        const icon = btn.querySelector('i');
+        
+        if (this.isPlaying) {
+            icon.className = 'fas fa-pause';
+            btn.innerHTML = '<i class="fas fa-pause"></i> Pause';
+        } else {
+            icon.className = 'fas fa-play';
+            btn.innerHTML = '<i class="fas fa-play"></i> Play';
+        }
+    }
+
+    resetView() {
+        this.camera.position.set(0, 50, 200);
+        this.controls.target.set(0, 0, 0);
+        this.controls.update();
+        this.switchView('solar');
+    }
+
+    animate() {
+        requestAnimationFrame(() => this.animate());
+        
+        if (this.isPlaying) {
+            const deltaTime = this.clock.getDelta();
+            
+            // Animate planets
+            Object.values(this.planets).forEach(planet => {
+                const userData = planet.userData;
+                
+                // Rotation
+                planet.rotation.y += userData.rotationSpeed * this.animationSpeed;
+                
+                // Orbital motion
+                if (userData.orbitRadius > 0) {
+                    userData.angle += userData.orbitSpeed * this.animationSpeed;
+                    planet.position.x = Math.cos(userData.angle) * userData.orbitRadius;
+                    planet.position.z = Math.sin(userData.angle) * userData.orbitRadius;
+                }
+            });
+            
+            // Animate asteroids
+            this.scene.children.forEach(child => {
+                if (child.userData && child.userData.orbitRadius && child.userData.orbitSpeed) {
+                    child.userData.angle += child.userData.orbitSpeed * this.animationSpeed;
+                    child.position.x = Math.cos(child.userData.angle) * child.userData.orbitRadius;
+                    child.position.z = Math.sin(child.userData.angle) * child.userData.orbitRadius;
+                }
             });
         }
         
-        // Filter by search term
-        if (searchTerm) {
-            filteredLectures = filteredLectures.filter(lecture => 
-                lecture.subject.toLowerCase().includes(searchTerm) ||
-                (lecture.instructor && lecture.instructor.toLowerCase().includes(searchTerm)) ||
-                (lecture.notes && lecture.notes.toLowerCase().includes(searchTerm))
-            );
-        }
-        
-        // Filter by subject
-        if (selectedSubject) {
-            filteredLectures = filteredLectures.filter(lecture => 
-                lecture.subject === selectedSubject
-            );
-        }
-        
-        this.renderLectureList(filteredLectures);
+        this.controls.update();
+        this.renderer.render(this.scene, this.camera);
     }
 
-    renderLectures() {
-        this.filterLectures();
+    onWindowResize() {
+        this.camera.aspect = window.innerWidth / window.innerHeight;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
-    renderLectureList(lectures) {
-        const lectureList = document.getElementById('lectureList');
-        
-        if (lectures.length === 0) {
-            lectureList.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-calendar-plus"></i>
-                    <h3>No lectures found</h3>
-                    <p>${this.currentView === 'upcoming' ? 'No upcoming lectures scheduled' : 'No lectures match your search criteria'}</p>
-                </div>
-            `;
-            return;
-        }
-        
-        // Sort lectures by date and time
-        lectures.sort((a, b) => {
-            const dateA = new Date(`${a.date}T${a.time}`);
-            const dateB = new Date(`${b.date}T${b.time}`);
-            return dateA - dateB;
-        });
-        
-        lectureList.innerHTML = lectures.map(lecture => this.createLectureCard(lecture)).join('');
-    }
-
-    createLectureCard(lecture) {
-        const lectureDateTime = new Date(`${lecture.date}T${lecture.time}`);
-        const now = new Date();
-        const isUpcoming = lectureDateTime >= now;
-        const isPast = lectureDateTime < now;
-        
-        const endTime = new Date(lectureDateTime.getTime() + lecture.duration * 60000);
-        const formattedDate = lectureDateTime.toLocaleDateString('en-US', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-        });
-        const formattedTime = lectureDateTime.toLocaleTimeString('en-US', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-        });
-        const formattedEndTime = endTime.toLocaleTimeString('en-US', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-        });
-        
-        const statusClass = isUpcoming ? 'upcoming' : (isPast ? 'past' : '');
-        
-        return `
-            <div class="lecture-item ${statusClass}">
-                <div class="lecture-header">
-                    <div>
-                        <div class="lecture-subject">${lecture.subject}</div>
-                        ${lecture.instructor ? `<div class="lecture-instructor"><i class="fas fa-user-tie"></i> ${lecture.instructor}</div>` : ''}
-                    </div>
-                    <div class="lecture-actions">
-                        <button class="action-btn edit-btn" onclick="scheduler.editLecture(${lecture.id})" title="Edit">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="action-btn delete-btn" onclick="scheduler.showDeleteModal(${lecture.id})" title="Delete">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="lecture-details">
-                    <div class="detail-item">
-                        <i class="fas fa-calendar"></i>
-                        <span>${formattedDate}</span>
-                    </div>
-                    <div class="detail-item">
-                        <i class="fas fa-clock"></i>
-                        <span>${formattedTime} - ${formattedEndTime}</span>
-                    </div>
-                    <div class="detail-item">
-                        <i class="fas fa-hourglass-half"></i>
-                        <span>${lecture.duration} minutes</span>
-                    </div>
-                    <div class="detail-item">
-                        <i class="fas fa-video"></i>
-                        <span>${lecture.platform}</span>
-                    </div>
-                </div>
-                
-                ${lecture.meetingLink ? `
-                    <div style="margin: 15px 0;">
-                        <a href="${lecture.meetingLink}" target="_blank" class="meeting-link">
-                            <i class="fas fa-external-link-alt"></i> Join Meeting
-                        </a>
-                    </div>
-                ` : ''}
-                
-                ${lecture.notes ? `
-                    <div class="lecture-notes">
-                        <strong>Notes:</strong> ${lecture.notes}
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    }
-
-    showDeleteModal(id) {
-        this.lectureToDelete = id;
-        document.getElementById('deleteModal').classList.add('show');
-    }
-
-    closeModal() {
-        document.getElementById('deleteModal').classList.remove('show');
-        this.lectureToDelete = null;
-    }
-
-    confirmDelete() {
-        if (this.lectureToDelete) {
-            this.deleteLecture(this.lectureToDelete);
-            this.closeModal();
-        }
-    }
-
-    updateSubjectFilter() {
-        const subjects = [...new Set(this.lectures.map(lecture => lecture.subject))].sort();
-        const filterSelect = document.getElementById('filterSubject');
-        
-        filterSelect.innerHTML = '<option value="">All Subjects</option>';
-        subjects.forEach(subject => {
-            filterSelect.innerHTML += `<option value="${subject}">${subject}</option>`;
-        });
-    }
-
-    showNotification(message) {
-        // Create notification element
-        const notification = document.createElement('div');
-        notification.className = 'notification';
-        notification.innerHTML = `
-            <div class="notification-content">
-                <i class="fas fa-check-circle"></i>
-                <span>${message}</span>
-            </div>
-        `;
-        
-        // Add notification styles
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #10b981;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 10px;
-            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
-            z-index: 1001;
-            animation: slideInRight 0.3s ease-out;
-        `;
-        
-        // Add animation styles if not already present
-        if (!document.getElementById('notificationStyles')) {
-            const styles = document.createElement('style');
-            styles.id = 'notificationStyles';
-            styles.innerHTML = `
-                @keyframes slideInRight {
-                    from { transform: translateX(100%); opacity: 0; }
-                    to { transform: translateX(0); opacity: 1; }
-                }
-                .notification-content {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                }
-            `;
-            document.head.appendChild(styles);
-        }
-        
-        document.body.appendChild(notification);
-        
-        // Remove notification after 3 seconds
+    hideLoadingScreen() {
         setTimeout(() => {
-            notification.style.animation = 'slideInRight 0.3s ease-out reverse';
+            const loadingScreen = document.getElementById('loading-screen');
+            loadingScreen.style.opacity = '0';
             setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 300);
-        }, 3000);
-    }
-
-    loadLectures() {
-        try {
-            const stored = localStorage.getItem('lectures');
-            return stored ? JSON.parse(stored) : [];
-        } catch (error) {
-            console.error('Error loading lectures from localStorage:', error);
-            return [];
-        }
-    }
-
-    saveLectures() {
-        try {
-            localStorage.setItem('lectures', JSON.stringify(this.lectures));
-        } catch (error) {
-            console.error('Error saving lectures to localStorage:', error);
-            this.showNotification('Error saving data. Please try again.');
-        }
+                loadingScreen.style.display = 'none';
+            }, 500);
+        }, 2000);
     }
 }
 
-// Initialize the application when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.scheduler = new LectureScheduler();
-});
-
-// Add some sample data for demonstration (only if no lectures exist)
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-        if (window.scheduler && window.scheduler.lectures.length === 0) {
-            const today = new Date();
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            
-            const sampleLectures = [
-                {
-                    id: 1,
-                    subject: 'Advanced JavaScript',
-                    date: tomorrow.toISOString().split('T')[0],
-                    time: '10:00',
-                    duration: 90,
-                    platform: 'Zoom',
-                    instructor: 'Dr. Sarah Johnson',
-                    meetingLink: 'https://zoom.us/j/1234567890',
-                    notes: 'Covering ES6+ features, async/await, and modern JavaScript patterns',
-                    createdAt: Date.now()
-                },
-                {
-                    id: 2,
-                    subject: 'React Development',
-                    date: tomorrow.toISOString().split('T')[0],
-                    time: '14:30',
-                    duration: 120,
-                    platform: 'Google Meet',
-                    instructor: 'Prof. Mike Chen',
-                    meetingLink: 'https://meet.google.com/abc-defg-hij',
-                    notes: 'Building modern React applications with hooks and context',
-                    createdAt: Date.now()
-                }
-            ];
-            
-            // Only add sample data if user wants it
-            if (confirm('Would you like to add some sample lectures to get started?')) {
-                window.scheduler.lectures = sampleLectures;
-                window.scheduler.saveLectures();
-                window.scheduler.renderLectures();
-                window.scheduler.updateSubjectFilter();
-            }
-        }
-    }, 1000);
+// Initialize the Universe Explorer when page loads
+window.addEventListener('load', () => {
+    new UniverseExplorer();
 });

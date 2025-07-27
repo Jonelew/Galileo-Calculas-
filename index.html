@@ -3,138 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lecture Schedule Manager</title>
+    <title>Universe Explorer - Solar System & Beyond</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
+    <div id="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h2>Loading Universe...</h2>
+            <p>Initializing 3D space environment</p>
+        </div>
+    </div>
+
+    <div class="ui-overlay">
         <header class="header">
             <div class="header-content">
-                <i class="fas fa-graduation-cap"></i>
-                <h1>Lecture Schedule Manager</h1>
-                <p>Organize your online learning sessions</p>
+                <i class="fas fa-rocket"></i>
+                <h1>Universe Explorer</h1>
+                <p>Journey through space and time</p>
             </div>
         </header>
 
-        <main class="main-content">
-            <div class="form-section">
-                <div class="form-card">
-                    <h2><i class="fas fa-plus-circle"></i> Add New Lecture</h2>
-                    <form id="lectureForm">
-                        <div class="form-group">
-                            <label for="subject">
-                                <i class="fas fa-book"></i> Subject
-                            </label>
-                            <input type="text" id="subject" name="subject" placeholder="Enter subject name" required>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="date">
-                                    <i class="fas fa-calendar"></i> Date
-                                </label>
-                                <input type="date" id="date" name="date" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="time">
-                                    <i class="fas fa-clock"></i> Time
-                                </label>
-                                <input type="time" id="time" name="time" required>
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="duration">
-                                    <i class="fas fa-hourglass-half"></i> Duration (minutes)
-                                </label>
-                                <input type="number" id="duration" name="duration" placeholder="60" min="15" max="300" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="platform">
-                                    <i class="fas fa-video"></i> Platform
-                                </label>
-                                <select id="platform" name="platform" required>
-                                    <option value="">Select Platform</option>
-                                    <option value="Zoom">Zoom</option>
-                                    <option value="Google Meet">Google Meet</option>
-                                    <option value="Microsoft Teams">Microsoft Teams</option>
-                                    <option value="Discord">Discord</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="instructor">
-                                <i class="fas fa-user-tie"></i> Instructor
-                            </label>
-                            <input type="text" id="instructor" name="instructor" placeholder="Instructor name">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="meetingLink">
-                                <i class="fas fa-link"></i> Meeting Link (Optional)
-                            </label>
-                            <input type="url" id="meetingLink" name="meetingLink" placeholder="https://zoom.us/j/...">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="notes">
-                                <i class="fas fa-sticky-note"></i> Notes
-                            </label>
-                            <textarea id="notes" name="notes" placeholder="Additional notes about the lecture" rows="3"></textarea>
-                        </div>
-
-                        <button type="submit" class="submit-btn">
-                            <i class="fas fa-plus"></i> Add Lecture
-                        </button>
-                    </form>
+        <div class="control-panel">
+            <div class="view-controls">
+                <h3><i class="fas fa-eye"></i> View Mode</h3>
+                <div class="button-group">
+                    <button id="solarSystemBtn" class="control-btn active" data-view="solar">
+                        <i class="fas fa-sun"></i> Solar System
+                    </button>
+                    <button id="galaxyBtn" class="control-btn" data-view="galaxy">
+                        <i class="fas fa-star"></i> Galaxy
+                    </button>
+                    <button id="universeBtn" class="control-btn" data-view="universe">
+                        <i class="fas fa-globe"></i> Universe
+                    </button>
                 </div>
             </div>
 
-            <div class="schedule-section">
-                <div class="schedule-header">
-                    <h2><i class="fas fa-calendar-alt"></i> Your Lecture Schedule</h2>
-                    <div class="view-toggle">
-                        <button class="toggle-btn active" data-view="upcoming">
-                            <i class="fas fa-clock"></i> Upcoming
-                        </button>
-                        <button class="toggle-btn" data-view="all">
-                            <i class="fas fa-list"></i> All
-                        </button>
-                    </div>
-                </div>
-
-                <div class="filter-bar">
-                    <input type="text" id="searchLectures" placeholder="Search lectures..." class="search-input">
-                    <select id="filterSubject" class="filter-select">
-                        <option value="">All Subjects</option>
-                    </select>
-                </div>
-
-                <div id="lectureList" class="lecture-list">
-                    <div class="empty-state">
-                        <i class="fas fa-calendar-plus"></i>
-                        <h3>No lectures scheduled yet</h3>
-                        <p>Add your first lecture using the form above</p>
-                    </div>
+            <div class="planet-selector">
+                <h3><i class="fas fa-globe-americas"></i> Planets</h3>
+                <div class="planet-grid">
+                    <button class="planet-btn" data-planet="sun">
+                        <div class="planet-icon sun"></div>
+                        <span>Sun</span>
+                    </button>
+                    <button class="planet-btn" data-planet="mercury">
+                        <div class="planet-icon mercury"></div>
+                        <span>Mercury</span>
+                    </button>
+                    <button class="planet-btn" data-planet="venus">
+                        <div class="planet-icon venus"></div>
+                        <span>Venus</span>
+                    </button>
+                    <button class="planet-btn" data-planet="earth">
+                        <div class="planet-icon earth"></div>
+                        <span>Earth</span>
+                    </button>
+                    <button class="planet-btn" data-planet="mars">
+                        <div class="planet-icon mars"></div>
+                        <span>Mars</span>
+                    </button>
+                    <button class="planet-btn" data-planet="jupiter">
+                        <div class="planet-icon jupiter"></div>
+                        <span>Jupiter</span>
+                    </button>
+                    <button class="planet-btn" data-planet="saturn">
+                        <div class="planet-icon saturn"></div>
+                        <span>Saturn</span>
+                    </button>
+                    <button class="planet-btn" data-planet="uranus">
+                        <div class="planet-icon uranus"></div>
+                        <span>Uranus</span>
+                    </button>
+                    <button class="planet-btn" data-planet="neptune">
+                        <div class="planet-icon neptune"></div>
+                        <span>Neptune</span>
+                    </button>
                 </div>
             </div>
-        </main>
-    </div>
 
-    <div id="deleteModal" class="modal">
-        <div class="modal-content">
-            <h3><i class="fas fa-exclamation-triangle"></i> Confirm Delete</h3>
-            <p>Are you sure you want to delete this lecture?</p>
-            <div class="modal-actions">
-                <button id="confirmDelete" class="btn-danger">Delete</button>
-                <button id="cancelDelete" class="btn-secondary">Cancel</button>
+            <div class="simulation-controls">
+                <h3><i class="fas fa-cog"></i> Controls</h3>
+                <div class="control-group">
+                    <label for="speedSlider">Animation Speed</label>
+                    <input type="range" id="speedSlider" min="0" max="5" value="1" step="0.1">
+                    <span id="speedValue">1x</span>
+                </div>
+                <div class="control-group">
+                    <button id="playPauseBtn" class="control-btn">
+                        <i class="fas fa-pause"></i> Pause
+                    </button>
+                    <button id="resetBtn" class="control-btn">
+                        <i class="fas fa-undo"></i> Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <div class="object-info">
+                <h3 id="objectTitle">Solar System Overview</h3>
+                <div id="objectDescription">
+                    <p>Our Solar System consists of the Sun and everything that orbits it, including planets, moons, asteroids, comets and meteoroids.</p>
+                    <ul>
+                        <li><strong>Age:</strong> ~4.6 billion years</li>
+                        <li><strong>Location:</strong> Milky Way Galaxy</li>
+                        <li><strong>Planets:</strong> 8 major planets</li>
+                        <li><strong>Central Star:</strong> The Sun</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="navigation-help">
+            <div class="help-content">
+                <h4><i class="fas fa-question-circle"></i> Navigation</h4>
+                <p><strong>Mouse:</strong> Click and drag to rotate view</p>
+                <p><strong>Scroll:</strong> Zoom in/out</p>
+                <p><strong>Right-click:</strong> Pan view</p>
             </div>
         </div>
     </div>
+
+    <div id="canvas-container"></div>
 
     <script src="script.js"></script>
 </body>
